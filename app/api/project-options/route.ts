@@ -19,7 +19,12 @@ export async function GET() {
       language: metadata.language,
       bootVersion: metadata.bootVersion,
       packaging: metadata.packaging,
-      configurationFileFormat: metadata.configurationFileFormat,
+      configurationFileFormat: {
+        default: "properties",
+        values: metadata.configurationFileFormat.values.filter(
+          (item: { id: string }) => item.id === "properties",
+        ),
+      },
       javaVersion: metadata.javaVersion,
       groupId: metadata.groupId,
       artifactId: metadata.artifactId,

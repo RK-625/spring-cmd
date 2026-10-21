@@ -1,6 +1,7 @@
 import type { Dependency, ProjectOptions, ProjectSettingsValues } from "@/lib/spring";
 
 export type ProjectState = {
+  commandFeedback: { command: string; status: "copied" | "error" } | null;
   project: {
     options: ProjectOptions | null;
     settings: ProjectSettingsValues | null;
@@ -20,11 +21,13 @@ export type ProjectState = {
 };
 
 export const initialProjectState: ProjectState = {
+  commandFeedback: null,
   project: { options: null, settings: null, customPackage: null, error: "", attempt: 0 },
   dependencies: { catalogue: [], selected: null, added: [], query: "", loading: true, error: "", attempt: 0 },
 };
 
 type Action =
+  | { type: "command/feedback"; command: string; status: "copied" | "error" }
   | { type: "project/loaded"; options: ProjectOptions }
   | { type: "project/failed" }
   | { type: "project/retry" }
@@ -48,6 +51,8 @@ export function getPackageName(project: ProjectState["project"]) {
 export function projectReducer(state: ProjectState, action: Action): ProjectState {
   const { project, dependencies } = state;
   switch (action.type) {
+    case "command/feedback":
+      return { ...state, commandFeedback: { command: action.command, status: action.status } };
     case "project/loaded": {
       const options = action.options;
       return { ...state, project: { ...project, options, error: "", settings: project.settings ?? {

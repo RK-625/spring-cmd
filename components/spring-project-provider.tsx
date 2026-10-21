@@ -3,8 +3,13 @@
 import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
 import { getPackageName, initialProjectState, projectReducer, type ProjectState } from "@/lib/project-state";
 import type { Dependency, ProjectSettingsValues } from "@/lib/spring";
+import { buildSpringCommand } from "@/lib/spring-command";
 
 type SpringProjectContextValue = {
+  command: string;
+  commandError: string | null;
+  copyStatus: "copied" | "error" | null;
+  copyCommand: () => Promise<void>;
   project: ProjectState["project"] & { packageName: string };
   dependencies: ProjectState["dependencies"] & { available: Dependency[] };
   updateSetting: (key: keyof ProjectSettingsValues, value: string) => void;
@@ -55,7 +60,26 @@ export function SpringProjectProvider({ children }: { children: ReactNode }) {
   }, [state.dependencies.attempt]);
 
   const addedIds = new Set(state.dependencies.added.map(item => item.id));
+  const commandResult = state.project.settings && !state.project.error &&
+    !state.dependencies.loading && !state.dependencies.error
+    ? buildSpringCommand(state.project.settings, getPackageName(state.project), state.dependencies.added)
+    : { command: "", error: null };
+
+  async function copyCommand() {
+    if (!commandResult.command) return;
+    try {
+      await navigator.clipboard.writeText(commandResult.command);
+      dispatch({ type: "command/feedback", command: commandResult.command, status: "copied" });
+    } catch {
+      dispatch({ type: "command/feedback", command: commandResult.command, status: "error" });
+    }
+  }
+
   const value: SpringProjectContextValue = {
+    command: commandResult.command,
+    commandError: commandResult.error,
+    copyStatus: state.commandFeedback?.command === commandResult.command ? state.commandFeedback.status : null,
+    copyCommand,
     project: { ...state.project, packageName: getPackageName(state.project) },
     dependencies: {
       ...state.dependencies,
